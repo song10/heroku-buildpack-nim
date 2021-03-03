@@ -15,6 +15,19 @@ function cat_or() {
   echo $(cat $1 2>/dev/null || echo $2)
 }
 
+function export_env_dir() {
+  env_dir=$1
+  acceptlist_regex=${2:-'^(NIM_)'}
+  denylist_regex=${3:-'^(PATH|GIT_DIR|CPATH|CPPATH|LD_PRELOAD|LIBRARY_PATH)$'}
+  if [ -d "$env_dir" ]; then
+    for e in $(ls $env_dir); do
+      echo "$e" | grep -E "$acceptlist_regex" | grep -qvE "$denylist_regex" &&
+      export "$e=$(cat $env_dir/$e)"
+      :
+    done
+  fi
+}
+
 BASE_DIR=$PWD
 BUILD_DIR=$1
 CACHE_DIR=$2
@@ -55,7 +68,9 @@ if [ ! -x $NIMBLE_BIN ]; then
     $NIM_BIN c -r src/nimble install -y
 fi
 
+export_env_dir $ENV_DIR
 
 echo "Building app" | arrow
 cd $BUILD_DIR
-$NIMBLE_BIN build --accept
+echo "$NIMBLE_BIN --accept build $NIM_BLDFLAGS" | arrow
+$NIMBLE_BIN --accept build $NIM_BLDFLAGS
